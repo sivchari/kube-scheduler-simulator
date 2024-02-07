@@ -6,17 +6,18 @@ services:
     environment:
       - PORT=1212
       - KUBE_SCHEDULER_SIMULATOR_ETCD_URL=http://127.0.0.1:2379
-      - CORS_ALLOWED_ORIGIN_LIST=http://${SIMULATOR_EXTERNAL_IP:-localhost}:3000
       - KUBE_API_HOST=0.0.0.0
       - KUBE_API_PORT=3131
     ports:
       - "1212:1212"
-      - "3131:3131"
       - "1313:1313"
+      - "3131:3131"
     restart: always
     tty: true
     networks:
       - simulator-internal-network
+    volumes:
+      - ./kwok.yaml:/.kwok/kwok.yaml
   simulator-frontend:
     image: simulator-frontend
     restart: always
