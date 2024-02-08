@@ -18,7 +18,6 @@ FROM golang:1.21.6-alpine3.19
 COPY --from=build-env /go/src/simulator/bin/simulator .
 RUN chmod a+x ./simulator
 COPY config.yaml .
-COPY kwok.yaml /root/.kwok/kwok.yaml
 
 EXPOSE 1212
 CMD ["./simulator"]

@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -12,6 +12,7 @@ import (
 	"golang.org/x/xerrors"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/support/kwok"
 
 	"sigs.k8s.io/kube-scheduler-simulator/simulator/config"
@@ -38,20 +39,16 @@ func startSimulator() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	cluster := kwok.NewCluster("kwok").WithVersion("v0.5.0")
-	_, err = cluster.Create(ctx)
-	if err != nil {
+	cluster := kwok.NewCluster("kwok")
+	if _, err = cluster.Create(ctx); err != nil {
 		return xerrors.Errorf("create cluster: %w", err)
 	}
-
-	cmd := exec.Command("kwokctl", "kubectl", "proxy", "--port=1313", "--address=0.0.0.0")
-	err = cmd.Start()
+	restCfg, err := conf.New(cluster.GetKubeconfig())
 	if err != nil {
-		return xerrors.Errorf("start kubectl proxy: %w", err)
+		return xerrors.Errorf("create rest config: %w", err)
 	}
-	klog.Infof("kubectl proxy: pid=%d", cmd.Process.Pid)
 
-	client := clientset.NewForConfigOrDie(cluster.KubernetesRestConfig())
+	client := clientset.NewForConfigOrDie(restCfg)
 
 	importClusterResourceClient := &clientset.Clientset{}
 	if cfg.ExternalImportEnabled {
@@ -61,6 +58,7 @@ func startSimulator() error {
 		}
 	}
 
+	log.Println("start to connect")
 	etcdclient, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{cfg.EtcdURL},
 		DialTimeout: 2 * time.Second,
@@ -69,7 +67,7 @@ func startSimulator() error {
 		return xerrors.Errorf("create an etcd client: %w", err)
 	}
 
-	dic, err := di.NewDIContainer(client, etcdclient, cluster.KubernetesRestConfig(), cfg.InitialSchedulerCfg, cfg.ExternalImportEnabled, importClusterResourceClient, cfg.ExternalSchedulerEnabled, cfg.Port)
+	dic, err := di.NewDIContainer(client, etcdclient, restCfg, cfg.InitialSchedulerCfg, cfg.ExternalImportEnabled, importClusterResourceClient, cfg.ExternalSchedulerEnabled, cfg.Port)
 	if err != nil {
 		return xerrors.Errorf("create di container: %w", err)
 	}
