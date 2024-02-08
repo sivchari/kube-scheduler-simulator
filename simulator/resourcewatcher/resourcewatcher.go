@@ -4,6 +4,7 @@ package resourcewatcher
 
 import (
 	"context"
+	"log"
 
 	"golang.org/x/xerrors"
 	corev1 "k8s.io/api/core/v1"
@@ -74,6 +75,7 @@ func (s *Service) ListWatch(ctx context.Context, stream sw.ResponseStream, lrVer
 	for _, p := range proxies {
 		go s.run(p, runctx.Done(), cancel)
 	}
+	log.Println("aaaaaaaa")
 
 	select {
 	case <-runctx.Done():
